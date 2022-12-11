@@ -1,14 +1,16 @@
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include <ESP8266HTTPUpdateServer.h>
+
 #include <ArduinoJson.h>
 #include <ArduinoHttpClient.h>
 #include <PubSubClient.h>
-#include <DHT.h>
-#include <Adafruit_BMP280.h>
+// #include <DHT.h>
+// #include <Adafruit_BMP280.h>
 #include <ESP8266WiFi.h> //ESP8266
-#include <OneWire.h>  
-#include <DallasTemperature.h>
+// #include <OneWire.h>  
+// #include <DallasTemperature.h>
+#include "http_server.hpp"
+#include "define_list.hpp"
+#include "configuracao_sensor.hpp"
+
 
 #define BAUDE_RATE 9600
 
@@ -36,18 +38,13 @@
 // endereço do thingsboard
 char thingsboardServer[] = "10.5.39.18"; 
 
-// const char* host = "esp8266-webupdate";
-// const char* update_path = "/firmware";
-// const char* update_username = "admin";
-// const char* update_password = "admin";
-
 WiFiClient wifiClient; //objeto para conexao ao thingsboard
 WiFiClient nodeClient; //objeto para conexao ao node-red
 
-// configuração do sensor DS18B20
-OneWire pino(4); //D2
-DallasTemperature barramento(&pino);
-DeviceAddress sensor;
+// // configuração do sensor DS18B20
+// OneWire pino(4); //D2
+// DallasTemperature barramento(&pino);
+// DeviceAddress sensor;
 
 // Initialize DHT sensor.
 // DHT dht(DHTPIN, DHTTYPE);
@@ -61,11 +58,7 @@ DeviceAddress sensor;
 PubSubClient client(wifiClient);
 PubSubClient mqtt_node(nodeClient);
 
-ESP8266WebServer httpServer(80);
-ESP8266HTTPUpdateServer httpUpdater;
-
 int status = WL_IDLE_STATUS;
-
 unsigned long lastSend;
 bool ledteste = false;
 
@@ -74,62 +67,66 @@ void setup()
     Serial.begin(BAUDE_RATE);
     pinMode(BUILTIN_LED, OUTPUT); 
     digitalWrite(LED_BUILTIN, 0); 
-    barramento.begin();
-    barramento.getAddress(sensor, 0);
+    SENSOR::iniciarSensor();
+    // barramento.begin();
+    // barramento.getAddress(sensor, 0);
     // dht.begin();
     //bmp.begin(0x76);
     delay(10);
     InitWiFi();   
+    
     client.setServer(thingsboardServer, 1883);
     mqtt_node.setServer(MQTT_ENDERECO_IP , MQTT_PORT);
     mqtt_node.setCallback(callback); // cadastro de tópicos para checagem. Ver funcao callback
     lastSend = 0;    
 
-  //   MDNS.begin(host);
-  // httpUpdater.setup(&httpServer, update_path, update_username, update_password);
-  // httpServer.begin();
-  // MDNS.addService("http", "tcp", 80);
-  // Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login with username '%s' and password '%s'\n", host, update_path, update_username, update_password);
-  }
+    HTTPSERVER::configurarHttpServer();
+}
 
 void loop()
 {
-/*---------------------------------------------------------------*/
-                    /*checa e conecta ao Thingsboard e Node-red */
-                    
-    if ((!client.connected()))  {reconnect();}
+    /*---------------------------------------------------------------*/
+    /*checa e conecta ao Thingsboard e Node-red */
 
-    if ((!mqtt_node.connected())) {reconnect();}
-
-/*---------------------------------------------------------------*/
-      
-    client.loop(); // conexao do thingsboard
-    mqtt_node.loop(); // conexao ao node-red
-
-  // httpServer.handleClient();
-  // MDNS.update();
-}
-
-
-void getAndSendTemperatureAndHumidityData() //função para envio de dados ao Thingsboard
-{     
-    barramento.requestTemperatures();
-    float tempC = barramento.getTempC(sensor);
-          
-    // Check if any reads failed and exit early (to try again).
-    if (isnan(tempC) )
+    if ((!client.connected()))
     {
-        Serial.println("Failed to read sensor!");
-        return;
+      reconnect();
     }
 
-       String t = String(tempC);
-  
-    //Prepare a JSON payload string
+    if ((!mqtt_node.connected()))
+    {
+      reconnect();
+    }
+
+    /*---------------------------------------------------------------*/
+    
+    client.loop();    // conexao do thingsboard
+    mqtt_node.loop(); // conexao ao node-red
+
+    HTTPSERVER::checarHttpServer();
+}
+
+void getAndSendTemperatureAndHumidityData() // função para envio de dados ao Thingsboard
+{
+    // barramento.requestTemperatures();
+    // float tempC = barramento.getTempC(sensor);
+
+    // // Check if any reads failed and exit early (to try again).
+    // if (isnan(tempC))
+    // {
+    //   Serial.println("Failed to read sensor!");
+    //   return;
+    // }
+
+    // String t = String(tempC);
+
+    
+
+    // Prepare a JSON payload string
     String payload = "{";
     payload += "\"temperatura\":";
-    payload += t;    
-    payload += "}";    
+    payload += SENSOR::aquisitarTemperatura();
+    payload += "}";
 
     // Send payload
     char attributes[100];
@@ -140,14 +137,13 @@ void getAndSendTemperatureAndHumidityData() //função para envio de dados ao Th
 
 /* Funcao: envia os valores para o dashboard node-red*/
 void send_data_nodered(void)
-  {
-    barramento.requestTemperatures();
-    float tempC = barramento.getTempC(sensor);
+{
+    // barramento.requestTemperatures();
+    // float tempC = barramento.getTempC(sensor);
 
-// envia os valores aquisitados através dos tópicos cadastrados no node-red
-   mqtt_node.publish(TOPICO_PUB_TEMPERATURA, String(tempC).c_str(), true);
-  
-  }
+    // // envia os valores aquisitados através dos tópicos cadastrados no node-red
+    // mqtt_node.publish(TOPICO_PUB_TEMPERATURA, String(tempC).c_str(), true);
+}
 
 void InitWiFi()
 {
@@ -157,8 +153,8 @@ void InitWiFi()
     WiFi.begin(WIFI_AP, WIFI_PASSWORD);
     while (WiFi.status() != WL_CONNECTED)
     {
-        //digitalWrite(LED_BUILTIN, LOW);
-        delay(100);
+      // digitalWrite(LED_BUILTIN, LOW);
+      delay(100);
     }
     Serial.println("Connected to AP");
 }
