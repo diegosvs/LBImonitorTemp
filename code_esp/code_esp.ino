@@ -8,8 +8,7 @@
 // #include <OneWire.h>  
 // #include <DallasTemperature.h>
 #include "http_server.hpp"
-#include "define_list.hpp"
-#include "configuracao_sensor.hpp"
+#include "ds18b20_config.hpp"
 
 
 #define BAUDE_RATE 9600
@@ -118,9 +117,7 @@ void getAndSendTemperatureAndHumidityData() // função para envio de dados ao T
     //   return;
     // }
 
-    // String t = String(tempC);
-
-    
+    // String t = String(tempC);    
 
     // Prepare a JSON payload string
     String payload = "{";
@@ -222,16 +219,16 @@ void reconnect()
   /*topico que checa se o botao de teste do dashboard do led interno foi pressionado*/
     if(topic==TOPICO_SUBS_LED) 
         {  
-          if(messageTemp == "ligar" )
-            {
-              ledteste=!ledteste;
-              digitalWrite(LED_BUILTIN, ledteste);
-            }
+          // if(messageTemp == "ligar" )
+          //   {
+          //     ledteste=!ledteste;
+          //     digitalWrite(LED_BUILTIN, ledteste);
+          //   }
             
-          else if(messageTemp == "desligar")
-            {      
-              //digitalWrite(LED_BUILTIN, HIGH);
-            }
+          // else if(messageTemp == "desligar")
+          //   {      
+          //     //digitalWrite(LED_BUILTIN, HIGH);
+          //   }
         }  
   
     /*recebe o topico que aciona a funcao de envio de valores para o Thingsboard*/
@@ -246,9 +243,9 @@ void reconnect()
     /*recebe o topico que aciona a funcao de envio de valores para o dashboard no node-red*/
     else if(topic==TOPICO_SUBS_NODE) 
         {  
-          if(messageTemp == "send_data_node" )
-            {
-              send_data_nodered();            
-            }     
+          // if(messageTemp == "send_data_node" )
+          //   {
+          //     send_data_nodered();            
+          //   }     
         }       
   }
