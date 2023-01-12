@@ -1,5 +1,7 @@
 #include <OneWire.h>  
 #include <DallasTemperature.h>
+#include <ArduinoJson.h>
+#include <ArduinoHttpClient.h>
 
 namespace SENSOR
 {
@@ -7,6 +9,17 @@ namespace SENSOR
     OneWire pino(4); // D2
     DallasTemperature barramento(&pino);
     DeviceAddress sensor;
+    String aquisitarTemperatura();
+
+    String formatarPayload()
+    {
+        // Prepare a JSON payload string
+    String payload = "{";
+    payload += "\"temp\":";
+    payload += aquisitarTemperatura();
+    payload += "}";
+        return payload;
+    }
 
     void iniciarSensor()
     {

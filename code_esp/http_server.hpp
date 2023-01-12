@@ -5,8 +5,8 @@
 namespace HTTPSERVER
 {
     // nome do host para acesso e atualizacao via OTA. http://<HOST>.local/update_path
-    const char *host = "esp";
-    const char *update_path = "/sensorlbi";
+    const char *host = "sensorlmi";
+    const char *update_path = "/up";
     // const char* update_username = "admin";
     // const char* update_password = "admin";
 

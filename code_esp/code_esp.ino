@@ -1,6 +1,4 @@
 
-#include <ArduinoJson.h>
-#include <ArduinoHttpClient.h>
 #include <PubSubClient.h>
 // #include <DHT.h>
 // #include <Adafruit_BMP280.h>
@@ -9,11 +7,12 @@
 // #include <DallasTemperature.h>
 #include "http_server.hpp"
 #include "ds18b20_config.hpp"
+#include "wifi_config.hpp"
 
 
 #define BAUDE_RATE 9600
 
-#define TOKEN "_teste_" // senha do dispositivo cadastrado no thingsboard
+#define TOKEN "sensor_lmi" // senha do dispositivo cadastrado no thingsboard
 //#define TEMPO_DADO_BROKER 45 // tempo em minutos para aquisição no broker da thingsboard
 
 //credenciais ao broker no node-red
@@ -30,9 +29,6 @@
 #define TOPICO_SUBS_TB "datatago"
 #define TOPICO_SUBS_LED "LEDPLACA"
 
-//conexao à rede wifi
-#define WIFI_AP "IPT-IoT"
-#define WIFI_PASSWORD "r@cion@l"
 
 // endereço do thingsboard
 char thingsboardServer[] = "10.5.39.18"; 
@@ -40,24 +36,10 @@ char thingsboardServer[] = "10.5.39.18";
 WiFiClient wifiClient; //objeto para conexao ao thingsboard
 WiFiClient nodeClient; //objeto para conexao ao node-red
 
-// // configuração do sensor DS18B20
-// OneWire pino(4); //D2
-// DallasTemperature barramento(&pino);
-// DeviceAddress sensor;
-
-// Initialize DHT sensor.
-// DHT dht(DHTPIN, DHTTYPE);
-// #define DHTPIN 0 // PIN0 - PIN2 - PIN16
-// #define DHTTYPE DHT22
-
-//BMP280 ---> I2C PIN 5 - SCL / PIN4 - SDA
-// Adafruit_BMP280 bmp; // sensor bmp conecta pela i2c
-
 //Objetos para conexao ao Thingsboard e Node-red
 PubSubClient client(wifiClient);
 PubSubClient mqtt_node(nodeClient);
 
-int status = WL_IDLE_STATUS;
 unsigned long lastSend;
 bool ledteste = false;
 
@@ -67,13 +49,8 @@ void setup()
     pinMode(BUILTIN_LED, OUTPUT); 
     digitalWrite(LED_BUILTIN, 0); 
     SENSOR::iniciarSensor();
-    // barramento.begin();
-    // barramento.getAddress(sensor, 0);
-    // dht.begin();
-    //bmp.begin(0x76);
-    delay(10);
-    InitWiFi();   
-    
+     delay(10);
+    WIFICONFIG::conectarWifi();    
     client.setServer(thingsboardServer, 1883);
     mqtt_node.setServer(MQTT_ENDERECO_IP , MQTT_PORT);
     mqtt_node.setCallback(callback); // cadastro de tópicos para checagem. Ver funcao callback
@@ -107,23 +84,7 @@ void loop()
 
 void getAndSendTemperatureAndHumidityData() // função para envio de dados ao Thingsboard
 {
-    // barramento.requestTemperatures();
-    // float tempC = barramento.getTempC(sensor);
-
-    // // Check if any reads failed and exit early (to try again).
-    // if (isnan(tempC))
-    // {
-    //   Serial.println("Failed to read sensor!");
-    //   return;
-    // }
-
-    // String t = String(tempC);    
-
-    // Prepare a JSON payload string
-    String payload = "{";
-    payload += "\"temperatura\":";
-    payload += SENSOR::aquisitarTemperatura();
-    payload += "}";
+    String payload = SENSOR::formatarPayload();
 
     // Send payload
     char attributes[100];
@@ -142,38 +103,17 @@ void send_data_nodered(void)
     // mqtt_node.publish(TOPICO_PUB_TEMPERATURA, String(tempC).c_str(), true);
 }
 
-void InitWiFi()
-{
-    Serial.println("Connecting to AP ...");
-    // attempt to connect to WiFi network
-
-    WiFi.begin(WIFI_AP, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-      // digitalWrite(LED_BUILTIN, LOW);
-      delay(100);
-    }
-    Serial.println("Connected to AP");
-}
 
 void reconnect()
 {
     // Loop until we're reconnected
+     WIFICONFIG::conectarWifi();
+
     while ((!client.connected())||(!mqtt_node.connected()))
     {
-        status = WiFi.status();
-        if (status != WL_CONNECTED)
-        {
-            WiFi.begin(WIFI_AP, WIFI_PASSWORD);
-            while (WiFi.status() != WL_CONNECTED)
-            {
-                //digitalWrite(LED_BUILTIN, LOW);
-                delay(100);
-                
-                Serial.print(".");
-            }
-            Serial.println("Connected to AP");
-        }
+        
+        //WIFICONFIG::conectarWifi();
+       
 
         Serial.print("Connecting to Thingsboard node ...");
         // Attempt to connect (clientId, username, password)
@@ -196,6 +136,7 @@ void reconnect()
             // Wait 5 seconds before retrying
             digitalWrite(LED_BUILTIN, 0);
             delay(5000);
+             HTTPSERVER::checarHttpServer(); //quando desconectado do broker, permite acesso ao OTA
         }
     }
 }
