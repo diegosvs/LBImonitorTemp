@@ -1,10 +1,6 @@
 
 #include <PubSubClient.h>
-// #include <DHT.h>
-// #include <Adafruit_BMP280.h>
 #include <ESP8266WiFi.h> //ESP8266
-// #include <OneWire.h>  
-// #include <DallasTemperature.h>
 #include "http_server.hpp"
 #include "ds18b20_config.hpp"
 #include "wifi_config.hpp"
@@ -12,29 +8,27 @@
 
 #define BAUDE_RATE 9600
 
-#define TOKEN "sensor_lmi" // senha do dispositivo cadastrado no thingsboard
-//#define TEMPO_DADO_BROKER 45 // tempo em minutos para aquisição no broker da thingsboard
-
 //credenciais ao broker no node-red
-#define MQTT_USERNAME  ""  // nome do dispositivo cadastrado 
-#define MQTT_PASSWORD  ""  // se houver senha cadastrada no broker
-#define MQTT_PORT 1888  // porta especifica para comunicacao
-#define MQTT_ENDERECO_IP "10.5.39.18" // endereco de ip onde estiver rodando o node-red
+#define MQTT_ID "LBI"          // identificador para conexao mqtt
+#define MQTT_USERNAME "teste"          // nome do broker 
+#define MQTT_PASSWORD ""               // se houver senha cadastrada no broker
+#define MQTT_PORT 1887                 // porta especifica para comunicacao do broker mqtt
+#define MQTT_ENDERECO_IP "10.5.39.18"  // endereco de ip onde estiver rodando o node-red e thingsboard
 
 //tópicos necessários para envio de dados via mqtt
-#define TOPICO_PUB_TEMPERATURA "device/temperatura"
-#define TOPICO_PUB_UMIDADE "device/umidade"
-#define TOPICO_PUB_PRESSAO "device/pressao" 
+// #define TOPICO_PUB_TEMPERATURA "device/temperatura"
+// #define TOPICO_PUB_UMIDADE "device/umidade"
+// #define TOPICO_PUB_PRESSAO "device/pressao" 
 #define TOPICO_SUBS_NODE "datanode"
 #define TOPICO_SUBS_TB "datatago"
 #define TOPICO_SUBS_LED "LEDPLACA"
 
 
 // endereço do thingsboard
-char thingsboardServer[] = "10.5.39.18"; 
+char thingsboardServer[] = MQTT_ENDERECO_IP; 
 
-WiFiClient wifiClient; //objeto para conexao ao thingsboard
-WiFiClient nodeClient; //objeto para conexao ao node-red
+WiFiClient wifiClient; //objeto para conexao ao thingsboard (servidor de arquivos)
+WiFiClient nodeClient; //objeto para conexao ao node-red (servidor de automação)
 
 //Objetos para conexao ao Thingsboard e Node-red
 PubSubClient client(wifiClient);
@@ -56,7 +50,7 @@ void setup()
     mqtt_node.setCallback(callback); // cadastro de tópicos para checagem. Ver funcao callback
     lastSend = 0;    
 
-    HTTPSERVER::configurarHttpServer();
+    HTTPSERVER::configurarHttpServer(); // configura a pagina de OTA
 }
 
 void loop()
@@ -79,7 +73,7 @@ void loop()
     client.loop();    // conexao do thingsboard
     mqtt_node.loop(); // conexao ao node-red
 
-    HTTPSERVER::checarHttpServer();
+    HTTPSERVER::checarHttpServer(); //mantem o recurso OTA ativo na rede wifi em que estiver conectado
 }
 
 void getAndSendTemperatureAndHumidityData() // função para envio de dados ao Thingsboard
@@ -89,7 +83,7 @@ void getAndSendTemperatureAndHumidityData() // função para envio de dados ao T
     // Send payload
     char attributes[100];
     payload.toCharArray(attributes, 100);
-    client.publish("v1/devices/me/telemetry", attributes);
+    client.publish("v1/devices/me/telemetry", attributes); //regra para envio de payload para thingsboard
     Serial.println(attributes);
 }
 
@@ -103,27 +97,24 @@ void send_data_nodered(void)
     // mqtt_node.publish(TOPICO_PUB_TEMPERATURA, String(tempC).c_str(), true);
 }
 
-
 void reconnect()
 {
     // Loop until we're reconnected
      WIFICONFIG::conectarWifi();
 
     while ((!client.connected())||(!mqtt_node.connected()))
-    {
+    {        
+        //WIFICONFIG::conectarWifi();      
         
-        //WIFICONFIG::conectarWifi();
-       
-
         Serial.print("Connecting to Thingsboard node ...");
         // Attempt to connect (clientId, username, password)
 
-        if ((client.connect("ESP8266 Device", TOKEN, NULL))&&(mqtt_node.connect("teste", MQTT_USERNAME, MQTT_PASSWORD)))
+        if ((client.connect(MQTT_ID, MQTT_USERNAME, MQTT_PASSWORD))&&(mqtt_node.connect(MQTT_ID, MQTT_USERNAME, MQTT_PASSWORD)))
         {
             Serial.println("[DONE]");
             digitalWrite(LED_BUILTIN, 1);
             //getAndSendTemperatureAndHumidityData(); // envia um payload ao broker assim que dispositivo é ligado
-            mqtt_node.subscribe(TOPICO_SUBS_LED); // topico de estado do led
+            //mqtt_node.subscribe(TOPICO_SUBS_LED); // topico de estado do led
             mqtt_node.subscribe(TOPICO_SUBS_TB); // topico que grava os dados em arquivo local do broker
             mqtt_node.subscribe(TOPICO_SUBS_NODE); // topico para envio de dados para o dashboard 
         }        

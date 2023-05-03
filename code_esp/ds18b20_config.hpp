@@ -31,9 +31,6 @@ namespace SENSOR
     {
         barramento.requestTemperatures();
         float tempC = barramento.getTempC(sensor);
-
-        // Check if any reads failed and exit early (to try again).
-
         String t = String(tempC);
         return t;
     }

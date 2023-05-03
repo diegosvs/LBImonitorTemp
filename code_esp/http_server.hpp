@@ -4,10 +4,14 @@
 
 namespace HTTPSERVER
 {
-    // nome do host para acesso e atualizacao via OTA. http://<HOST>.local/update_path
-    const char *host = "sensorlmi";
+    // nome do host para acesso e atualizacao via OTA. http://<HOST>.local/up
+    //para acessar na rede interna do IPT, digitar o ip estático configurado no wifi + /up
+    // ex: [ip_estático]/up
+    const char *host = "sensorlbi";
     const char *update_path = "/up";
-    // const char* update_username = "admin";
+
+    /*descomentar para habilitar credencial*/
+    // const char* update_username = "admin"; 
     // const char* update_password = "admin";
 
     // objetos para pagina de acesso OTA
