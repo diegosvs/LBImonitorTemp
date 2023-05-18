@@ -7,11 +7,11 @@ namespace WIFICONFIG
 {
 
     // conexao à rede wifi
-#define WIFI_AP "IPT-IoT-Novo"
+#define WIFI_AP "IPT-IoT"
 #define WIFI_PASSWORD "r@cion@l"
 
 //Static IP address configuration
-IPAddress staticIP(10,56,56,208); //ESP static ip
+IPAddress staticIP(10,56,56,88); //ESP static ip
 IPAddress gateway(10,56,56,1);   //IP Address of your WiFi Router (Gateway)
 IPAddress subnet(255, 255, 255, 0);  //Subnet mask
 //IPAddress dns(10,11,39,5);  //DNS
@@ -32,9 +32,7 @@ IPAddress subnet(255, 255, 255, 0);  //Subnet mask
             
             while (WiFi.status() != WL_CONNECTED)
             {
-                SENSOR::aquisitarTemperatura();
-                digitalWrite(LED_BUILTIN, 1);
-                delay(1000);
+                SENSOR::aquisitarTemperaturaOffline();
                 digitalWrite(LED_BUILTIN, 0);
                 delay(100);
             }

@@ -34,8 +34,8 @@ WiFiClient nodeClient; //objeto para conexao ao node-red (servidor de automaçã
 PubSubClient client(wifiClient);
 PubSubClient mqtt_node(nodeClient);
 
-unsigned long lastSend;
-bool ledteste = false;
+// unsigned long lastSend;
+// bool ledteste = false;
 
 void setup()
 {
@@ -48,16 +48,18 @@ void setup()
     client.setServer(thingsboardServer, 1883);
     mqtt_node.setServer(MQTT_ENDERECO_IP , MQTT_PORT);
     mqtt_node.setCallback(callback); // cadastro de tópicos para checagem. Ver funcao callback
-    lastSend = 0;    
+    //lastSend = 0;    
 
     HTTPSERVER::configurarHttpServer(); // configura a pagina de OTA
+
+    //ESP.wdtEnable(5000);
 }
 
 void loop()
 {
     /*---------------------------------------------------------------*/
     /*checa e conecta ao Thingsboard e Node-red */
-
+    //ESP.wdtFeed();
     if ((!client.connected()))
     {
       reconnect();
@@ -74,6 +76,7 @@ void loop()
     mqtt_node.loop(); // conexao ao node-red
 
     HTTPSERVER::checarHttpServer(); //mantem o recurso OTA ativo na rede wifi em que estiver conectado
+
 }
 
 void getAndSendTemperatureAndHumidityData() // função para envio de dados ao Thingsboard
@@ -92,9 +95,10 @@ void send_data_nodered(void)
 {
     // barramento.requestTemperatures();
     // float tempC = barramento.getTempC(sensor);
+    //float tempC = 3.4;
 
-    // // envia os valores aquisitados através dos tópicos cadastrados no node-red
-    // mqtt_node.publish(TOPICO_PUB_TEMPERATURA, String(tempC).c_str(), true);
+    // envia os valores aquisitados através dos tópicos cadastrados no node-red
+    //mqtt_node.publish(TOPICO_PUB_TEMPERATURA, String(tempC).c_str(), true);
 }
 
 void reconnect()
@@ -121,12 +125,13 @@ void reconnect()
 
         else
         {
-            Serial.print("[FAILED] [ rc = ");
-            Serial.print(client.state());
-            Serial.println(" : retrying in 5 seconds]");
+            SENSOR::aquisitarTemperaturaOffline();
+            //Serial.print("[FAILED] [ rc = ");
+            //Serial.print(client.state());
+            //Serial.println(" : retrying in 5 seconds]");
             // Wait 5 seconds before retrying
             digitalWrite(LED_BUILTIN, 0);
-            delay(5000);
+            delay(100);
              HTTPSERVER::checarHttpServer(); //quando desconectado do broker, permite acesso ao OTA
         }
     }
@@ -175,9 +180,9 @@ void reconnect()
     /*recebe o topico que aciona a funcao de envio de valores para o dashboard no node-red*/
     else if(topic==TOPICO_SUBS_NODE) 
         {  
-          // if(messageTemp == "send_data_node" )
-          //   {
-          //     send_data_nodered();            
-          //   }     
+          if(messageTemp == "send_data_node" )
+            {
+              send_data_nodered();            
+            }     
         }       
   }

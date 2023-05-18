@@ -10,6 +10,7 @@ namespace SENSOR
     DallasTemperature barramento(&pino);
     DeviceAddress sensor;
     String aquisitarTemperatura();
+    void aquisitarTemperaturaOffline();
 
     String formatarPayload()
     {
@@ -31,8 +32,25 @@ namespace SENSOR
     {
         barramento.requestTemperatures();
         float tempC = barramento.getTempC(sensor);
+        // float tempC = 20.4;
         String t = String(tempC);
         return t;
+    }
+
+    void aquisitarTemperaturaOffline()
+    {
+        barramento.requestTemperatures();
+        float tempC = barramento.getTempC(sensor);
+        // float tempC = 20.4;
+
+        if (tempC > -8.0)
+        {
+           digitalWrite(LED_BUILTIN, 1);
+                delay(50);
+                digitalWrite(LED_BUILTIN, 0);
+                delay(50);
+        }
+        
     }
 
 }
